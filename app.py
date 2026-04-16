@@ -4,10 +4,28 @@ from pydantic import BaseModel
 import joblib
 import pandas as pd
 import math
+from datetime import datetime
 
+import os
+import json
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+# ----------------------------
+# FIREBASE INIT
+# ----------------------------
+firebase_key = json.loads(os.environ["FIREBASE_KEY"])
+
+cred = credentials.Certificate(firebase_key)
+firebase_admin.initialize_app(cred)
+
+db = firestore.client()
+
+# ----------------------------
+# FASTAPI APP
+# ----------------------------
 app = FastAPI()
 
-# Allow mobile app / frontend access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,39 +33,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load trained model
 model = joblib.load("model.pkl")
 
 # ----------------------------
-# INPUT FROM MOBILE APP
+# INPUT MODEL
 # ----------------------------
 class SensorData(BaseModel):
     latitude: float
     longitude: float
     speed: float
-
     acc_x: float
     acc_y: float
     acc_z: float
-
     gyro_x: float
     gyro_y: float
     gyro_z: float
-
 
 @app.get("/health")
 def health():
     return {"status": "running"}
 
 # ----------------------------
-# PREDICTION ENDPOINT
+# PREDICT ENDPOINT
 # ----------------------------
 @app.post("/predict")
 def predict(data: SensorData):
 
-    # ----------------------------
-    # FEATURE ENGINEERING
-    # ----------------------------
     acc_magnitude = math.sqrt(
         data.acc_x**2 + data.acc_y**2 + data.acc_z**2
     )
@@ -56,9 +67,6 @@ def predict(data: SensorData):
         data.gyro_x**2 + data.gyro_y**2 + data.gyro_z**2
     )
 
-    # ----------------------------
-    # CREATE MODEL INPUT
-    # ----------------------------
     df = pd.DataFrame([[
         acc_magnitude,
         gyro_magnitude,
@@ -73,15 +81,18 @@ def predict(data: SensorData):
         "longitude"
     ])
 
-    # ----------------------------
-    # PREDICT
-    # ----------------------------
     prediction = model.predict(df)[0]
-
-    # ----------------------------
-    # OUTPUT LABEL
-    # ----------------------------
     result = "pothole" if prediction == 1 else "no pothole"
+
+    doc = {
+        "latitude": data.latitude,
+        "longitude": data.longitude,
+        "prediction": result,
+        "created_at": datetime.utcnow()
+    }
+
+    if result == "pothole":
+        db.collection("potholes").add(doc)
 
     return {
         "prediction": result,
