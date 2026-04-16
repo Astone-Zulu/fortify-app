@@ -97,8 +97,9 @@ def predict(data: SensorData):
         "created_at": datetime.utcnow()
     }
 
-    #if result == "pothole":
-    db.collection("potholes").add(doc)
+    if result == "pothole":
+        db.collection("potholes").add(doc)
+    
 
     return {
         "prediction": result,
