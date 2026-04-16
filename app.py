@@ -14,7 +14,13 @@ from firebase_admin import credentials, firestore
 # ----------------------------
 # FIREBASE INIT
 # ----------------------------
-firebase_key = json.loads(os.environ["FIREBASE_KEY"])
+firebase_env = os.getenv("FIREBASE_KEY")
+
+if not firebase_env:
+
+    raise Exception("FIREBASE_KEY not set in environment variables")
+
+firebase_key = json.loads(firebase_env)
 
 cred = credentials.Certificate(firebase_key)
 firebase_admin.initialize_app(cred)
