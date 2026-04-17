@@ -88,7 +88,7 @@ def predict(data: SensorData):
     ])
 
     prediction = model.predict(df)[0]
-    result = "pothole" if prediction == 1 else "no pothole"
+    result = "pothole" if prediction == 0 else "no pothole"
 
     doc = {
         "latitude": data.latitude,
