@@ -88,7 +88,7 @@ def predict(data: SensorData):
     ])
 
     prediction = model.predict(df)[0]
-    result = "pothole" if prediction == 1 else "no pothole"
+    result = "pothole" if prediction == 0 else "no pothole"
 
     doc = {
         "latitude": data.latitude,
@@ -97,8 +97,8 @@ def predict(data: SensorData):
         "created_at": datetime.utcnow()
     }
 
-    if result == "pothole":
-        db.collection("potholes").add(doc)
+    #if result == "pothole":
+    db.collection("potholes").add(doc)
     
 
     return {
